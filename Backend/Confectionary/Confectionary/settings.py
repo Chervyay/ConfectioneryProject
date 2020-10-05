@@ -107,6 +107,11 @@ STATIC_DIR = os.path.join(BASE_DIR, 'static')
 MEDIA_URL = '/media/'
 MEDIA_DIR = os.path.join(BASE_DIR, 'media')
 
+CLIENT_AVATARS_DIR = MEDIA_DIR + '/ClientAvatars'
+RECIPE_AVATARS_DIR = MEDIA_DIR + '/RecipeAvatars'
+RECIPE_PICTURES_DIR = MEDIA_DIR + '/RecipePictures'
+
+
 AUTH_USER_MODEL = 'Backend.Client'
 
 REST_FRAMEWORK = {
