@@ -1,0 +1,57 @@
+.nav {
+    height: 200px;
+    width: 1920px;
+    display: inline-block;
+    background-color: #9b4ad3;
+
+}
+
+.logotip{
+    margin-top: 40px;
+    margin-left: 220px;
+    height: 115px;
+    width: 480px;
+}
+.buttmom_rand_recept {
+    background-color: #00a6d1;
+    border: none;
+    color: white;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+
+    cursor: pointer;
+    margin-right: 1050px;
+    margin-top: 70px;
+
+}
+.buttmom_moi_recept {
+    background-color: #c964f8;
+    border: none;
+    color: white;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+
+    cursor: pointer;
+    margin-right: 850px;
+    margin-top: 70px;
+}
+.buttmom_rand_cob {
+    background-color: #1df456;
+    border: none;
+    color: white;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+
+    cursor: pointer;
+    margin-right: 750px;
+    margin-top: 70px;
+}
