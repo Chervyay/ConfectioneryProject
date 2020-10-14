@@ -15,6 +15,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+CURRENT_PREFIX = 'http://188.243.62.96:8000'
 
 # Application definition
 
@@ -102,14 +103,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_DIR = os.path.join(BASE_DIR, 'static')
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 MEDIA_URL = '/media/'
-MEDIA_DIR = os.path.join(BASE_DIR, 'media')
-
-CLIENT_AVATARS_DIR = MEDIA_DIR + '/ClientAvatars'
-RECIPE_AVATARS_DIR = MEDIA_DIR + '/RecipeAvatars'
-RECIPE_PICTURES_DIR = MEDIA_DIR + '/RecipePictures'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 
 AUTH_USER_MODEL = 'Backend.Client'

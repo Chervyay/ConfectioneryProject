@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import *
-
+from django.conf.urls.static import static
+from django.conf import settings
 
 urlpatterns = [
     path('recipes_by_title/<str:search_title>/', recipes_by_title),
@@ -18,6 +19,6 @@ urlpatterns = [
 
     path('recipe_grade_add/<str:recipe_pk>/', recipe_grade_add),
     path('comment_grade_add/<str:comment_pk>/', comment_grade_add),
-]
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # path('Recipes/random/<str:quantity>/', recipes_random),

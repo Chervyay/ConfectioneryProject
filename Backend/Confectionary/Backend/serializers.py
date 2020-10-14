@@ -3,36 +3,37 @@ from django.contrib.auth.models import Group
 from .models import *
 # from django.conf import settings
 import os
-import base64
 
 ##### Сериализаторы данных пользователя #####
 
 # (для карточки рецепта)
-class ClientSimpleSerializer(serializers.ModelSerializer):
+class ClientRecipeCardSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client
         fields = ('id', 'username')
 
 
 # (для страницы рецепта)
-class ClientSurfaceSerializer(ClientSimpleSerializer):
+class ClientRecipePageSerializer(ClientRecipeCardSerializer):
+
     avatar = serializers.SerializerMethodField()
 
-    class Meta(ClientSimpleSerializer.Meta):
-        fields = ClientSimpleSerializer.Meta.fields + ('avatar',)
+    class Meta(ClientRecipeCardSerializer.Meta):
+        fields = ClientRecipeCardSerializer.Meta.fields + ('avatar',)
 
     def get_avatar(self, client_obj):
-        # settings.BASE_DIR + ...
-        return client_obj.avatar.path + '.' + client_obj.avatar.format
+        return settings.CURRENT_PREFIX + client_obj.try_get_avatar()
 
 
 # (для публичной части страницы пользователя)
-class ClientShowSerializer(ClientSurfaceSerializer):
-    status = serializers.SerializerMethodField()
+class ClientPublicPageSerializer(ClientRecipePageSerializer):
 
-    class Meta(ClientSurfaceSerializer.Meta):
-        fields = ClientSurfaceSerializer.Meta.fields + ('first_name', 'last_name', 'patronymic', 'status',
-                                                        'date_joined', 'last_login')
+    status = serializers.SerializerMethodField()
+    last_login = serializers.SerializerMethodField()
+
+    class Meta(ClientRecipePageSerializer.Meta):
+        fields = ClientRecipePageSerializer.Meta.fields + ('first_name', 'last_name', 'patronymic', 'status',
+                                                           'date_joined', 'last_login')
 
     def get_status(self, client_obj):
         if client_obj.is_active:
@@ -40,42 +41,43 @@ class ClientShowSerializer(ClientSurfaceSerializer):
         else:
             return "Заблокирован"
 
+    def get_last_login(self, client_obj):
+        last_login = client_obj.last_login
+        if last_login:
+            return last_login.strftime('%Y-%m-%d %H:%M:%S')
+
 
 # (для страницы пользователя)
-class ClientSerializer(ClientSurfaceSerializer):
-    class Meta(ClientSurfaceSerializer.Meta):
-        fields = ClientSurfaceSerializer.Meta.fields + ('first_name', 'last_name', 'patronymic', 'email')
+class ClientSelfPageSerializer(ClientRecipePageSerializer):
+    class Meta(ClientRecipePageSerializer.Meta):
+        fields = ClientRecipePageSerializer.Meta.fields + ('first_name', 'last_name', 'patronymic', 'email')
 
 
-# (для регистрации пользователя)
-class ClientDeserializer(serializers.ModelSerializer):
+# (для регистрации или редактирования данных пользователя)
+class ClientFormSerializer(serializers.ModelSerializer):
 
-    avatar = serializers.SerializerMethodField()
+    avatar = serializers.ImageField(max_length=100, required=False)
 
     class Meta:
         model = Client
-        fields = ('username', 'email', 'avatar', 'first_name', 'last_name', 'patronymic')
-
-    def get_avatar(self, client_obj):
-        # Изображение приходит в кодировке base64
-        avatar_decoded = base64.b64decode(client_obj.avatar.picture)
-        avatar_format = client_obj.avatar.format
-        avatar_path = settings.CLIENT_AVATARS_DIR + '/' + str(
-            len(os.listdir(settings.CLIENT_AVATARS_DIR)) + 1) + '.' + avatar_format
-        picture_file = open(avatar_path, 'w')
-        picture_file.write(avatar_decoded)
-        picture_file.close()
-        avatar = ClientAvatar(client_id=client_obj, path=avatar_path, format=avatar_format)
-        return avatar
+        fields = ('username', 'password', 'email', 'first_name', 'last_name', 'patronymic', 'avatar')
 
     def save(self):
+        try:
+            avatar_got = self.validated_data['avatar']
+        except KeyError:
+            avatar_got = None
+        try:
+            email_got = self.validated_data['email']
+        except KeyError:
+            email_got = None
         new_client = Client(
             username=self.validated_data['username'],
-            email=self.validated_data['email'],
+            email=email_got,
             first_name=self.validated_data['first_name'],
             last_name=self.validated_data['last_name'],
             patronymic=self.validated_data['patronymic'],
-            avatar=self.avatar,
+            avatar=avatar_got
         )
         password = self.validated_data['password']
         new_client.set_password(password)
@@ -87,11 +89,18 @@ class ClientDeserializer(serializers.ModelSerializer):
 
 ##### Сериализаторы данных тега #####
 
-# (для страницы рецепта)
-class TagSimpleSerializer(serializers.ModelSerializer):
+# (для прикрепления тега к рецепту)
+class TagFormSerializer(serializers.ModelSerializer):
     class Meta:
         model = FixedTag
-        fields = ('id', 'name')
+        fields = ('name',)
+
+
+# (для страницы рецепта)
+class TagSerializer(TagFormSerializer):
+    class Meta(TagFormSerializer.Meta):
+        model = FixedTag
+        fields = TagFormSerializer.Meta.fields + ('id',)
 
 
 
@@ -99,7 +108,7 @@ class TagSimpleSerializer(serializers.ModelSerializer):
 
 # (для страницы рецепта)
 class CommentSerializer(serializers.ModelSerializer):
-    creator = ClientSurfaceSerializer()
+    creator = ClientRecipePageSerializer()
     rating = serializers.SerializerMethodField()
 
     class Meta:
@@ -107,7 +116,7 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = ('id', 'creator', 'body', 'date_init', 'rating')
 
     def get_rating(self, comment_obj):
-        grades = CommentGrade.objects.filter(comment=comment_obj.pk)
+        grades = CommentGrade.objects.filter(comment=comment_obj.id)
         rating_value = 0
         # Проходимся по всем объектам оценивания и подсчитываем общий рейтинг
         for grade in grades:
@@ -118,7 +127,7 @@ class CommentSerializer(serializers.ModelSerializer):
         return rating_value
 
 
-class CommentDeserializer(serializers.ModelSerializer):
+class CommentFormSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = ('body',)
@@ -145,33 +154,24 @@ class FixedPictureSerializer(serializers.ModelSerializer):
         fields = ('id', 'picture',)
 
     def get_picture(self, picture_obj):
-        return picture_obj.path + '.' + picture_obj.format
+        return settings.CURRENT_PREFIX + picture_obj.picture.url
 
 
 # (для добавления изображения к рецепту)
-class FixedPictureDeserializer(serializers.ModelSerializer):
+class FixedPictureFormSerializer(serializers.ModelSerializer):
 
-    path = serializers.SerializerMethodField()
+    picture = serializers.ImageField(max_length=100)
 
     class Meta:
         model = FixedPicture
-        fields = ('path', 'format')
-
-    def get_path(self, picture_obj):
-        # Изображение приходит в кодировке base64
-        picture_decoded = base64.b64decode(picture_obj.picture)
-        picture_path = settings.RECIPE_PICTURES_DIR + '/' + str(len(os.listdir(settings.RECIPE_PICTURES_DIR)) + 1)
-        picture_file = open(picture_path, 'w')
-        picture_file.write(picture_decoded)
-        picture_file.close()
-        return picture_path
+        fields = ('picture',)
 
 
 
 ##### Сериализаторы данных рецепта #####
 
 # (для карточки рецепта конкретного пользователя)
-class RecipeForCreatorSerializer(serializers.ModelSerializer):
+class RecipeCardForCreatorSerializer(serializers.ModelSerializer):
 
     avatar = serializers.SerializerMethodField()
     rating = serializers.SerializerMethodField()
@@ -181,7 +181,7 @@ class RecipeForCreatorSerializer(serializers.ModelSerializer):
         fields = ('id', 'title', 'avatar', 'rating')
 
     def get_avatar(self, recipe_obj):
-        return recipe_obj.avatar.path + '.' + recipe_obj.avatar.format
+        return settings.CURRENT_PREFIX + recipe_obj.try_get_avatar()
 
     def get_rating(self, recipe_obj):
         grades = RecipeGrade.objects.filter(recipe=recipe_obj.pk)
@@ -196,54 +196,59 @@ class RecipeForCreatorSerializer(serializers.ModelSerializer):
 
 
 # (для карточки рецепта)
-class RecipeShowSerializer(RecipeForCreatorSerializer):
+class RecipeCardSerializer(RecipeCardForCreatorSerializer):
 
-    creator = ClientSimpleSerializer()
+    creator = ClientRecipeCardSerializer()
 
-    class Meta(RecipeForCreatorSerializer.Meta):
+    class Meta(RecipeCardForCreatorSerializer.Meta):
         model = Recipe
-        fields = RecipeForCreatorSerializer.Meta.fields + ('creator',)
+        fields = RecipeCardForCreatorSerializer.Meta.fields + ('creator',)
 
 
 # (для страницы рецепта)
-class RecipeSerializer(RecipeShowSerializer):
+class RecipePageSerializer(RecipeCardSerializer):
 
-    creator = ClientSurfaceSerializer()
+    creator = ClientRecipePageSerializer()
     fixed_pictures = FixedPictureSerializer(many=True)
-    fixed_tags = TagSimpleSerializer(many=True)
+    fixed_tags = TagSerializer(many=True)
     comments = CommentSerializer(many=True)
 
-    class Meta(RecipeShowSerializer.Meta):
-        fields = RecipeShowSerializer.Meta.fields + ('body', 'date_init', 'fixed_pictures', 'fixed_tags', 'comments')
+    class Meta(RecipeCardSerializer.Meta):
+        fields = RecipeCardSerializer.Meta.fields + ('body', 'date_init', 'fixed_pictures', 'fixed_tags', 'comments')
 
 
 # (для создания рецепта)
-class RecipeDeserializer(serializers.ModelSerializer):
+class RecipeFormSerializer(serializers.ModelSerializer):
 
-    avatar = serializers.SerializerMethodField()
-    fixed_pictures = FixedPictureDeserializer(many=True)
+    avatar = serializers.ImageField(max_length=100, required=False)
+    fixed_pictures = FixedPictureFormSerializer(many=True, required=False)
+    fixed_tags = TagFormSerializer(many=True, required=False)
 
     class Meta:
         model = Recipe
-        fields = ('title', 'body', 'avatar', 'fixed_pictures')
-
-    def get_avatar(self, recipe_obj):
-        # Изображение приходит в кодировке base64
-        avatar_decoded = base64.b64decode(recipe_obj.avatar)
-        avatar_path = settings.RECIPE_AVATARS_DIR + '/' + str(len(os.listdir(settings.RECIPE_AVATARS_DIR)) + 1)
-        picture_file = open(avatar_path, 'w')
-        picture_file.write(avatar_decoded)
-        picture_file.close()
-        return avatar_path
+        fields = ('title', 'body', 'avatar', 'fixed_pictures', 'fixed_tags')
 
     def save(self, request_client):
+        try:
+            avatar_got = self.validated_data['avatar']
+        except KeyError:
+            avatar_got = None
+        try:
+            pictures_got = self.validated_data['fixed_pictures']
+        except KeyError:
+            pictures_got = None
+        try:
+            tags_got = self.validated_data['fixed_tags']
+        except KeyError:
+            tags_got = None
         new_recipe = Recipe(
             creator=request_client,
             title=self.validated_data['title'],
             body=self.validated_data['body'],
-            avatar=self.validated_data['avatar'],
-            fixed_pictures=self.validated_data['fixed_pictures'],
+            avatar=avatar_got,
         )
+        new_recipe.fixed_pictures.set(pictures_got)
+        new_recipe.fixed_tags.set(tags_got)
         new_recipe.save()
 
 
@@ -251,7 +256,7 @@ class RecipeDeserializer(serializers.ModelSerializer):
 ##### Сериализаторы оценок #####
 
 # (для создания оценки рецепта)
-class RecipeGradeDeserializer(serializers.ModelSerializer):
+class RecipeGradeFormSerializer(serializers.ModelSerializer):
     class Meta:
         model = RecipeGrade
         fields = ('grade',)
@@ -266,7 +271,7 @@ class RecipeGradeDeserializer(serializers.ModelSerializer):
 
 
 # (для создания оценки комментария)
-class CommentGradeDeserializer(serializers.ModelSerializer):
+class CommentGradeFormSerializer(serializers.ModelSerializer):
     class Meta:
         model = CommentGrade
         fields = ('grade',)

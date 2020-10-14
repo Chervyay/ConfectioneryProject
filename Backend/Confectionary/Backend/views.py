@@ -3,7 +3,6 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework import status
 from .serializers import *
-# import base64
 # import random
 
 
@@ -14,8 +13,8 @@ def recipes_all(request):
         recipes = Recipe.objects.filter(status='A')
     except Recipe.DoesNotExist:
         return Response(data=request.data, status=status.HTTP_404_NOT_FOUND)
-    serializer = RecipeShowSerializer(recipes, many=True)
-    return Response(data={'recipes': serializer.data}, status=status.HTTP_302_FOUND)
+    serializer = RecipeCardSerializer(recipes, many=True)
+    return Response(data={'recipes': serializer.data}, status=status.HTTP_200_OK)
 
 '''
 @api_view(['GET'])
@@ -47,7 +46,7 @@ def recipes_random(request, quantity):
         recipes = Recipe.objects.filter(id__in=random_id)
     if recipes.exists():
         serializer = RecipeShowSerializer(recipes, many=True)
-        return Response({'recipes': serializer.data}, status=status.HTTP_302_FOUND)
+        return Response({'recipes': serializer.data}, status=status.HTTP_200_OK)
     else:
         return Response(request.data, status=status.HTTP_404_NOT_FOUND)'''
 
@@ -59,8 +58,8 @@ def recipes_by_title(request, search_title):
         recipes = Recipe.objects.filter(status='A', title__icontains=search_title)
     except Recipe.DoesNotExist:
         return Response(data=request.data, status=status.HTTP_404_NOT_FOUND)
-    serializer = RecipeShowSerializer(recipes, many=True)
-    return Response(data={'recipes': serializer.data}, status=status.HTTP_302_FOUND)
+    serializer = RecipeCardSerializer(recipes, many=True)
+    return Response(data={'recipes': serializer.data}, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
@@ -72,8 +71,8 @@ def recipes_by_tag(request, search_tag):
         ))
     except Recipe.DoesNotExist:
         return Response(data=request.data, status=status.HTTP_404_NOT_FOUND)
-    serializer = RecipeShowSerializer(recipes, many=True)
-    return Response(data={'recipes': serializer.data}, status=status.HTTP_302_FOUND)
+    serializer = RecipeCardSerializer(recipes, many=True)
+    return Response(data={'recipes': serializer.data}, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
@@ -85,8 +84,8 @@ def recipes_by_author(request, search_author):
         ))
     except Recipe.DoesNotExist:
         return Response(data=request.data, status=status.HTTP_404_NOT_FOUND)
-    serializer = RecipeShowSerializer(recipes, many=True)
-    return Response(data={'recipes': serializer.data}, status=status.HTTP_302_FOUND)
+    serializer = RecipeCardSerializer(recipes, many=True)
+    return Response(data={'recipes': serializer.data}, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
@@ -97,8 +96,8 @@ def client_recipes(request, pk):
         recipes = Recipe.objects.filter(status='A', creator__in=(Client.objects.filter(id=pk)))
     except Recipe.DoesNotExist:
         return Response(data=request.data, status=status.HTTP_404_NOT_FOUND)
-    serializer = RecipeForCreatorSerializer(recipes, many=True)
-    return Response(data={'recipes': serializer.data}, status=status.HTTP_302_FOUND)
+    serializer = RecipeCardForCreatorSerializer(recipes, many=True)
+    return Response(data={'recipes': serializer.data}, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
@@ -108,8 +107,8 @@ def recipe_info(request, pk):
         recipe = Recipe.objects.get(id=pk)
     except Recipe.DoesNotExist:
         return Response(data=request.data, status=status.HTTP_404_NOT_FOUND)
-    serializer = RecipeSerializer(recipe)
-    return Response(data={'recipe': serializer.data}, status=status.HTTP_302_FOUND)
+    serializer = RecipePageSerializer(recipe)
+    return Response(data={'recipe': serializer.data}, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
@@ -119,17 +118,17 @@ def client_info(request, pk):
         client = Client.objects.get(id=pk)
     except Client.DoesNotExist:
         return Response(data=request.data, status=status.HTTP_404_NOT_FOUND)
-    serializer = ClientShowSerializer(client)
-    return Response(data={'client': serializer.data}, status=status.HTTP_302_FOUND)
+    serializer = ClientPublicPageSerializer(client)
+    return Response(data={'client': serializer.data}, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def client_reg(request):
-    new_client = ClientDeserializer(data=request.data)
+    new_client = ClientFormSerializer(data=request.data)
     if new_client.is_valid(raise_exception=False):
         new_client.save()
-        return Response(data=request.data, status=status.HTTP_201_CREATED)
+        return Response(data=new_client.data, status=status.HTTP_201_CREATED)
     return Response(data=new_client.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -137,10 +136,10 @@ def client_reg(request):
 # @permission_classes([IsAuthenticated])
 @permission_classes([AllowAny])
 def recipe_add(request):
-    new_recipe = RecipeDeserializer(data=request.data)
+    new_recipe = RecipeFormSerializer(data=request.data)
     if new_recipe.is_valid(raise_exception=False):
         new_recipe.save(request.user)
-        return Response(data=request.data, status=status.HTTP_201_CREATED)
+        return Response(data=new_recipe.data, status=status.HTTP_201_CREATED)
     return Response(data=new_recipe.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -148,10 +147,10 @@ def recipe_add(request):
 # @permission_classes([IsAuthenticated])
 @permission_classes([AllowAny])
 def comment_add(request, recipe_pk):
-    new_comment = CommentDeserializer(data=request.data)
+    new_comment = CommentFormSerializer(data=request.data)
     if new_comment.is_valid(raise_exception=False):
         new_comment.save(request.user, recipe_pk)
-        return Response(data=request.data, status=status.HTTP_201_CREATED)
+        return Response(data=new_comment.data, status=status.HTTP_201_CREATED)
     return Response(data=new_comment.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -159,10 +158,10 @@ def comment_add(request, recipe_pk):
 # @permission_classes([IsAuthenticated])
 @permission_classes([AllowAny])
 def recipe_grade_add(request, recipe_pk):
-    new_grade = RecipeGradeDeserializer(data=request.data)
+    new_grade = RecipeGradeFormSerializer(data=request.data)
     if Recipe.objects.get(id=recipe_pk).exists() and new_grade.is_valid(raise_exception=False):
         new_grade.save(request.user, recipe_pk)
-        return Response(data=request.data, status=status.HTTP_201_CREATED)
+        return Response(data=new_grade.data, status=status.HTTP_201_CREATED)
     return Response(data=new_grade.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -170,8 +169,8 @@ def recipe_grade_add(request, recipe_pk):
 # @permission_classes([IsAuthenticated])
 @permission_classes([AllowAny])
 def comment_grade_add(request, comment_pk):
-    new_grade = CommentGradeDeserializer(data=request.data)
+    new_grade = CommentGradeFormSerializer(data=request.data)
     if Comment.objects.get(id=comment_pk).exists() and new_grade.is_valid(raise_exception=False):
         new_grade.save(request.user, comment_pk)
-        return Response(data=request.data, status=status.HTTP_201_CREATED)
+        return Response(data=new_grade.data, status=status.HTTP_201_CREATED)
     return Response(data=new_grade.errors, status=status.HTTP_400_BAD_REQUEST)
