@@ -3,10 +3,12 @@ from django.conf import settings
 import os
 from django.contrib.auth.base_user import AbstractBaseUser
 from django.contrib.auth.models import PermissionsMixin, UserManager, AbstractUser
+from django.core.validators import MaxValueValidator
 from .validators import *
-from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.db.models import Q
+from django.utils import timezone
+import transliterate
 
 
 def client_avatar_upload_path(instance, filename):
@@ -14,13 +16,15 @@ def client_avatar_upload_path(instance, filename):
 
 
 def recipe_avatar_upload_path(instance, filename):
-    return '/'.join(['pictures', 'users', instance.creator.username, 'recipes', instance.id,
-                     'avatar', filename])
+    return '/'.join(['pictures', 'users', instance.creator.username, 'recipes',
+                     transliterate.translit(instance.title, reversed=True) + ' ('
+                     + str(instance.id) + ')', 'avatar', filename])
 
 
-def recipe_picture_upload_path(instance, filename):
+def cook_stage_picture_upload_path(instance, filename):
     return '/'.join(['pictures', 'users', instance.recipe.creator.username, 'recipes',
-                     instance.recipe.id, 'pictures', filename])
+                     transliterate.translit(instance.recipe.title, reversed=True) + ' ('
+                     + str(instance.recipe.id) + ')', 'cook stages', filename])
 
 
 class ClientManager(UserManager):
@@ -52,24 +56,34 @@ class Client(AbstractBaseUser, PermissionsMixin):
     patronymic = models.CharField(max_length=80, validators=[CustomPatronymicValidator()], blank=True,
                                   verbose_name='Отчество')
     avatar = models.ImageField(upload_to=client_avatar_upload_path, max_length=100, blank=True, verbose_name='Аватарка')
-    is_staff = models.BooleanField(default=False)
-    is_active = models.BooleanField(default=True)
-    last_login = models.DateTimeField(blank=True, null=True)
-    date_joined = models.DateField(default=timezone.now)
+    is_staff = models.BooleanField(default=False, verbose_name='Служебный аккаунт')
+    status_vars = (
+        ('A', 'Активен'),
+        ('B', 'Заблокирован'),
+    )
+    status = models.CharField(max_length=3, choices=status_vars, default='A', verbose_name='Статус активности')
+    last_login = models.DateTimeField(blank=True, null=True, verbose_name='Последнее подключение')
+    date_joined = models.DateField(auto_now_add=True, verbose_name='Дата создания аккаунта')
 
     objects = ClientManager()
 
     EMAIL_FIELD = 'email'
     USERNAME_FIELD = 'username'
 
+    default_avatar = '/media/pictures/default/client_default.jpg'
+
     def try_get_avatar(self):
         try:
-            got_avatar = self.avatar.url
+            avatar_got = self.avatar.url
+            if os.path.exists(settings.BASE_DIR + avatar_got):
+                return avatar_got
+            else:
+                self.avatar = ''
+                self.save()
+                raise ValueError
+        # в случае, если URL некорректный, или в системе не существует путь
         except ValueError:
-            return '/'.join(['/media', 'pictures', 'default', 'client_default.jpg'])
-        if os.path.exists(settings.BASE_DIR + got_avatar):
-            return got_avatar
-        return '/'.join(['/media', 'pictures', 'default', 'client_default.jpg'])
+            return self.default_avatar
 
 
 class Recipe(models.Model):
@@ -80,52 +94,79 @@ class Recipe(models.Model):
     creator = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name='recipes',
                                 verbose_name='Рецепт')
     title = models.CharField(max_length=100, default='', verbose_name='Наименование')
-    body = models.TextField(default='', verbose_name='Описание')
+
+    portions = models.PositiveSmallIntegerField(validators=[MaxValueValidator(100)], blank=True, null=True,
+                                                verbose_name='Количество порций')
+    cook_time = models.PositiveIntegerField(validators=[MaxValueValidator(1440)], blank=True, null=True,
+                                            verbose_name='Время приготовления')
+    weight = models.PositiveIntegerField(validators=[MaxValueValidator(1000000)], blank=True, null=True,
+                                         verbose_name='Вес')
     avatar = models.ImageField(upload_to=recipe_avatar_upload_path, max_length=100, blank=True, verbose_name='Аватарка')
     status_vars = (
         ('A', 'В широком доступе'),
         ('B', 'Заблокировано'),
     )
     status = models.CharField(max_length=3, choices=status_vars, default='A', verbose_name='Статус')
-    date_init = models.DateField(default=timezone.now, verbose_name='Дата создания')
+    date_init = models.DateField(auto_now_add=True, verbose_name='Дата создания')
+
+    default_avatar = '/media/pictures/default/recipe_default.png'
 
     def try_get_avatar(self):
         try:
-            got_avatar = self.avatar.url
+            avatar_got = self.avatar.url
+            if os.path.exists(settings.BASE_DIR + avatar_got):
+                return avatar_got
+            else:
+                self.avatar = ''
+                self.save()
+                raise ValueError
         except ValueError:
-            return '/'.join(['/media', 'pictures', 'default', 'recipe_default.jpg'])
-        if os.path.exists(settings.BASE_DIR + got_avatar):
-            return got_avatar
-        return '/'.join(['/media', 'pictures', 'default', 'recipe_default.jpg'])
+            return self.default_avatar
 
 
-class FixedPicture(models.Model):
+class CookStage(models.Model):
     class Meta:
-        verbose_name = _('Прикреплённое изображение')
-        verbose_name_plural = _('Прикреплённые изображения')
-        unique_together = ('recipe', 'picture')
+        verbose_name = _('Этап приготовления')
+        verbose_name_plural = _('Этапы приготовления')
 
-    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='fixed_pictures',
-                               verbose_name='Рецепт')
-    picture = models.ImageField(upload_to=recipe_picture_upload_path, max_length=100, verbose_name='Изображение')
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='cook_stages', verbose_name='Рецепт')
+    description = models.TextField(default='', max_length=500, verbose_name='Описание')
+    picture = models.ImageField(upload_to=cook_stage_picture_upload_path, max_length=100, blank=True,
+                                verbose_name='Изображение этапа')
 
-    '''def try_get_picture(self):
+    default_picture = '/media/pictures/default/cook_default.png'
+
+    def try_get_picture(self):
         try:
-            got_picture = self.picture.url
+            picture_got = self.picture.url
+            if os.path.exists(settings.BASE_DIR + picture_got):
+                return picture_got
+            else:
+                self.picture = ''
+                self.save()
+                raise ValueError
         except ValueError:
-            pass
-        if os.path.exists(settings.BASE_DIR + got_picture):
-            return got_picture
-        pass'''
+            return self.default_picture
 
 
-class FixedTag(models.Model):
+class Ingredient(models.Model):
+    class Meta:
+        verbose_name = _('Ингредиент')
+        verbose_name_plural = _('Ингредиенты')
+
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='ingredients', verbose_name='Рецепт')
+    name = models.CharField(default='', max_length=80, validators=[CustomIngredientValidator()],
+                            verbose_name='Наименование')
+    measure = models.CharField(default='', max_length=30, validators=[CustomMeasureValidator()], verbose_name='Мера')
+
+
+class Tag(models.Model):
     class Meta:
         verbose_name = _('Прикреплённый тег')
         verbose_name_plural = _('Прикреплённые теги')
 
-    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='fixed_tags', verbose_name='Рецепт')
-    name = models.CharField(max_length=30, default='', validators=[CustomTagValidator()], unique=True,
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='tags', verbose_name='Рецепт')
+    name = models.CharField(max_length=30, default='', validators=[CustomTagValidator()],
                             verbose_name='Наименование')
 
 
@@ -139,6 +180,11 @@ class RecipeGrade(models.Model):
                                   verbose_name='Оценивающий')
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='recipe_grades', verbose_name='Рецепт')
     grade = models.BooleanField(default=True, verbose_name='Оценка')
+    status_vars = (
+        ('A', 'Активна'),
+        ('B', 'Заблокирована'),
+    )
+    status = models.CharField(max_length=3, choices=status_vars, default='A', verbose_name='Статус')
 
 
 class Comment(models.Model):
@@ -155,7 +201,7 @@ class Comment(models.Model):
         ('B', 'Заблокировано'),
     )
     status = models.CharField(max_length=3, choices=status_vars, default='A', verbose_name='Статус')
-    date_init = models.DateTimeField(default=timezone.now, verbose_name='Дата создания')
+    date_init = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
 
 
 class CommentGrade(models.Model):
@@ -169,3 +215,8 @@ class CommentGrade(models.Model):
     comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name='comment_grades',
                                 verbose_name='Комментарий')
     grade = models.BooleanField(default=True, verbose_name='Оценка')
+    status_vars = (
+        ('A', 'Активна'),
+        ('B', 'Заблокирована'),
+    )
+    status = models.CharField(max_length=3, choices=status_vars, default='A', verbose_name='Статус')

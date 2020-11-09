@@ -15,7 +15,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-CURRENT_PREFIX = 'http://188.243.62.96:8000'
+CURRENT_PREFIX = 'http://tuna-muna-46159.portmap.host:46159'
+# 188.243.62.96:8000'  //192.168.1.52
 
 # Application definition
 
@@ -134,7 +135,13 @@ REST_FRAMEWORK = {
 
 CORS_ORIGIN_ALLOW_ALL = True
 
-try:
-    from .local_settings import *
-except ImportError:
-    from .prod_settings import *
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'confectionary_django',
+        'USER': 'root',
+        'PASSWORD': '1234',
+        'HOST': 'localhost',
+        'PORT': '3307',
+    }
+}
