@@ -3,7 +3,6 @@ from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.models import Group
 from django.conf import settings
-import os
 
 
 ##### Сериализаторы данных пользователя #####
@@ -55,8 +54,6 @@ class ClientPublicPageSerializer(ClientSelfPageSerializer):
 # (для регистрации или редактирования данных пользователя)
 class ClientFormSerializer(serializers.ModelSerializer):
 
-    # avatar_reset = serializers.BooleanField(required=False,in)
-
     class Meta:
         model = Client
         fields = ['username', 'password', 'email', 'first_name', 'last_name', 'patronymic', 'avatar']
@@ -64,6 +61,11 @@ class ClientFormSerializer(serializers.ModelSerializer):
             'email': {'required': False},
             'avatar': {'required': False}
         }
+
+    def reset_avatar(self):
+        self.instance.avatar.delete(save=True)
+        self.instance.avatar = ''
+        self.instance.save()
 
     def create(self, validated_data):
         password_got = validated_data.pop('password')
@@ -204,6 +206,11 @@ class CookStageFormSerializer(serializers.ModelSerializer):
         model = CookStage
         fields = ['description', 'picture']
 
+    def reset_picture(self):
+        self.instance.picture.delete(save=True)
+        self.instance.picture = ''
+        self.instance.save()
+
     def update(self, instance, validated_data):
         instance.description = validated_data.get('description', instance.description)
 
@@ -215,13 +222,6 @@ class CookStageFormSerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
-
-    '''def get_picture(self, cook_stage_obj):
-        try:
-            picture_got = self.validated_data['picture']
-        except KeyError:
-            picture_got = None
-        return picture_got'''
 
 
 
@@ -299,6 +299,11 @@ class RecipeFormSerializer(serializers.ModelSerializer):
             'weight': {'required': False},
             'avatar': {'required': False}
         }
+
+    def reset_avatar(self):
+        self.instance.avatar.delete(save=True)
+        self.instance.avatar = ''
+        self.instance.save()
 
     def create(self, validated_data):
         # выталкиваем все данные связанных таблиц
@@ -384,9 +389,10 @@ class RecipeFormSerializer(serializers.ModelSerializer):
         instance.cook_time = validated_data.get('cook_time', instance.cook_time)
         instance.weight = validated_data.get('weight', instance.weight)
 
+        # удаляем предыдущее изображение
         avatar_got = validated_data.get('avatar', None)
         if avatar_got:
-            # удаляем предыдущее изображение; метод не выбрасывает исключений
+            # метод не выбрасывает исключений
             instance.avatar.delete(save=True)
             instance.avatar = avatar_got
 

@@ -1,3 +1,5 @@
+import shutil
+
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
@@ -6,7 +8,6 @@ from rest_framework.decorators import api_view, permission_classes, parser_class
 from rest_framework import generics, status
 from djoser import utils
 from djoser.conf import settings as djoser_settings
-from djoser.views import TokenCreateView
 
 from .serializers import *
 # import random
@@ -176,10 +177,22 @@ def client_edit(request):
     except Client.DoesNotExist:
         return Response(data={"message": "Пользователь не существует или заблокирован."},
                         status=status.HTTP_404_NOT_FOUND)
-    '''if request.data.get('avatar', None) == 'reset':
-        request.data['avatar'] = '''''
-    new_client = ClientFormSerializer(instance=old_client, data=request.data, partial=True)
+
+    # флаг сброса аватарки
+    avatar_reset = False
+
+    # если в поле "avatar" кодовое слово "reset"
+    if request.data.get('avatar', None) == 'reset':
+        edited_data = request.data.copy()
+        edited_data.pop('avatar')
+        new_client = ClientFormSerializer(instance=old_client, data=edited_data, partial=True)
+        avatar_reset = True
+    else:
+        new_client = ClientFormSerializer(instance=old_client, data=request.data, partial=True)
+
     if new_client.is_valid():
+        if avatar_reset:
+            new_client.reset_avatar()
         new_client.save()
         return Response(data={"message": "Данные профиля успешно отредактированы."},
                         status=status.HTTP_202_ACCEPTED)
@@ -220,8 +233,44 @@ def recipe_edit(request, pk):
     except Recipe.DoesNotExist:
         return Response(data={"message": "Рецепт не существует, заблокирован или не принадлежит текущему пользователю."},
                         status=status.HTTP_404_NOT_FOUND)
-    new_recipe = RecipeFormSerializer(instance=old_recipe, data=request.data, partial=True)
+
+    # флаги сброса аватарки и картинок стадий приготовления
+    avatar_reset = False
+    pictures_reset = None
+
+    # работаем с изменяемой копией request.data
+    # (_mutable=True тоже работает, но не рекомендовано в документации)
+    edited_data = request.data.copy()
+
+    cook_stages_got = edited_data.get('cook_stages', None)
+    if cook_stages_got:
+        pictures_reset = [False] * len(cook_stages_got)
+        index = 0
+        for cook_stage in cook_stages_got:
+            # если в поле "picture" кодовое слово "reset"
+            if cook_stage.get('picture', None) == 'reset':
+                del cook_stage['picture']
+                pictures_reset[index] = True
+            index += 1
+
+    # если в поле "avatar" кодовое слово "reset"
+    if edited_data.get('avatar', None) == 'reset':
+        del edited_data['avatar']
+        avatar_reset = True
+
+    new_recipe = RecipeFormSerializer(instance=old_recipe, data=edited_data, partial=True)
+
     if new_recipe.is_valid():
+        # физически зачищаем все сброшенные картинки
+        if pictures_reset:
+            index = 0
+            for cook_stage in new_recipe.cook_stages:
+                if pictures_reset[index]:
+                    cook_stage.reset_picture()
+                index += 1
+        if avatar_reset:
+            new_recipe.reset_avatar()
+
         new_recipe.save()
         return Response(data={"message": "Данные рецепта успешно отредактированы."}, status=status.HTTP_202_ACCEPTED)
     return Response(data=new_recipe.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -233,7 +282,15 @@ def recipe_remove(request, pk):
     try:
         recipe = Recipe.objects.get(id=pk, creator=request.user, status='A')
     except Recipe.DoesNotExist:
-        return Response(data={"message": "Рецепт не существует или заблокирован."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(data={"message": "Рецепт не существует или заблокирован."},status=status.HTTP_404_NOT_FOUND)
+
+    # зачищаем соответствующие данные рецепта в ФС
+        # подготавливаем системный путь возможно созданного каталога файлов
+    rm_path = settings.BASE_DIR + settings.MEDIA_URL + recipe_avatar_upload_path(recipe, '')
+    rm_dir = 'recipes/%i' % recipe.id
+        # пробуем удалить каталог со всеми связанными изображениями
+    shutil.rmtree(path=rm_path[0: (rm_path.find(rm_dir) + len(rm_dir))], ignore_errors=True)
+
     recipe.delete()
     return Response(data={"message": "Рецепт успешно удалён."}, status=status.HTTP_202_ACCEPTED)
 
@@ -393,3 +450,6 @@ def comment_grade_cancel(request, comment_pk):
     grade.status = 'B'
     grade.save()
     return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# def remove_client()

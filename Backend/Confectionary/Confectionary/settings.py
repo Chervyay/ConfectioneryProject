@@ -1,7 +1,7 @@
 import os
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))).replace('\\', '/')
 
 
 # Quick-start development settings - unsuitable for production
@@ -14,9 +14,6 @@ SECRET_KEY = '9_i&x0b^q6=zj#ic^9^82t7m&coypzw@xf&nv#3=90+=3=&+j+'
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
-
-CURRENT_PREFIX = 'http://tuna-muna-46159.portmap.host:46159'
-# 188.243.62.96:8000'  //192.168.1.52
 
 # Application definition
 
@@ -109,6 +106,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+CURRENT_PREFIX = 'http://tuna-muna-46159.portmap.host:46159'
 
 AUTH_USER_MODEL = 'Backend.Client'
 
