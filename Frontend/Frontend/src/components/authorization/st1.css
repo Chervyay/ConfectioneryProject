@@ -1,0 +1,161 @@
+/* Общие стили для документа и блоков, менять не надо */
+html, body {
+    height: 100%;
+    width: 100%;
+    overflow:hidden;
+}
+body {
+    margin: 0;
+    font-family: Liberation Sans, sans-serif;
+}
+h1, form {
+    text-align: center;
+}
+h1 {
+    font-size: 30pt;
+    font-weight: 100;
+}
+
+input {
+    min-height: 30px;
+    font-size: 18pt;
+}
+
+.header,
+.left-side,
+.right-side,
+.footer, .blok-center {
+    padding: 10px 20px 10px 20px;
+    background-color: #f5f5f5;
+
+}
+
+/* Собственные стили блоков */
+
+.header {
+    min-height: 80px;
+    text-align: center;
+    background-color: #ff64f8;
+    color: #ffffff;
+    font-weight: bold;
+    margin: 0;
+}
+.header img {
+    float: left;
+    width: 21%;
+    height: 21%;
+    margin-left:170px;
+
+}
+.left-side {
+    width: 110px;
+    float: left;
+    background-color: #696969;
+    color:#696969;
+    height:435px;
+    left:0;
+}
+
+.right-side {
+    width: 110px;
+    float: right;
+    background-color: #696969;
+    color:#696969;
+    height:435px;
+    right:0;
+}
+
+.footer {
+    background-color: #00799f;
+    color: #ffffff;
+    clear: both;
+    width: 97,5%;
+    height:50px;
+}
+
+.blok-center {
+    position: absolute; /* Абсолютное позиционирование */
+    width: 1047px; /* Ширина блока */
+    height: 435px; /* Высота блока */
+    margin: 0; /* Отступ от блока */
+    top: 100px; /* Положение блока от верхнего края */
+    bottom: 0; /* Положение блока от нижнего края */
+    left: 150px; /* Положение блока от левого края */
+    right: 0; /* Положение блока от правого края */
+    background: #ffffff; /* Цвет фона блока */
+    padding: 10px; /* Отступ внутри блока */
+    overflow: auto; /* Полоса прокрутки */
+}
+
+.submit {
+    display: inline-block;
+    color: white;
+    background-color: #ff00ff;
+    font-weight: 100;
+    user-select: none;
+    padding: .5em 2em;
+    outline: none;
+    border: 0;
+    font-size: 21px;
+    text-align: center;
+    padding-left: 14px;
+    padding-right: 14px;
+    padding-bottom: 3px;
+    padding-top: 3px;
+
+
+
+}
+.submit:hover { background: #ff64f8; }
+.submit:active { background: #ff00ff; }
+
+.dropbtn1, .dropbtn2, .main {
+
+    background-color: #ff00ff;
+    color: white;
+    padding-left: 14px;
+    padding-right: 14px;
+    padding-bottom: 8px;
+    padding-top: 8px;
+    font-size: 21px;
+    border: none;
+    cursor: pointer;
+    margin-right: 6px;
+}
+
+.dropbtn1:hover, .dropbtn1:focus, .dropbtn2:hover, .dropbtn2:focus, .main:hover, .main:focus {
+    background-color: #e012e0;
+
+}
+
+.dropdown1, .dropdown2, .main {
+    right: -55px;
+    top: 20px;
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-content1, .dropdown-content2 {
+    display: none;
+    position: absolute;
+    background-color: #f1f1f1;
+    min-width: 150px;
+    overflow: auto;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1;
+}
+
+.dropdown-content1 {
+    min-width: 155px;
+}
+
+.dropdown-content1 a, .dropdown-content2 a {
+    color: black;
+    padding: 12px 1px 12px 1px;
+    text-decoration: none;
+    display: block;
+}
+
+.dropdown1 a:hover, .dropdown2 a:hover {background-color: #ddd;}
+
+.show {display: block;}

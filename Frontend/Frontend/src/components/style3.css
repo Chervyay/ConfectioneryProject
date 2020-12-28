@@ -1,0 +1,262 @@
+html, body {
+    height: 100%;
+    width: 100%;
+    overflow:hidden;
+}
+body {
+    margin: 0;
+    font-family: Liberation Sans, sans-serif;
+}
+h1, form {
+    text-align: center;
+}
+h1 {
+    font-size: 30pt;
+    font-weight: 100;
+}
+.info {
+    position: absolute;
+    right:15%;
+    top:23%;
+
+}
+
+h2 {
+    font-weight: 500;
+    font-size: 20pt;
+    margin-bottom: 0.5em;
+}
+
+p {
+    font-weight: 500;
+    font-size: 16pt;
+    margin-top: 0;
+    margin-bottom: 0.3em;
+}
+.fio {
+    position: relative;
+    right:-16%;
+}
+div.fio + p span {
+    color:green;
+}
+.colortext {
+    color:grey;
+}
+
+input {
+    min-height: 30px;
+    font-size: 18pt;
+}
+
+.header,
+.left-side,
+.right-side,
+.footer, .blok-center {
+    padding: 10px 20px 10px 20px;
+    background-color: #f5f5f5;
+
+}
+
+.header {
+    min-height: 12.8%;
+    text-align: center;
+    background-color: #ff64f8;
+    color: #ffffff;
+    font-weight: bold;
+    margin: 0;
+}
+.header img {
+    float: left;
+    width: 21%;
+    height: 21%;
+    margin-left:170px;
+
+}
+.blok-center img {
+    width: 20%;
+    height: 45%;
+    margin-top: 10%;
+    margin-left:15%;
+    border: 2px solid black;
+}
+.left-side {
+    width: 10%;
+    float: left;
+    background-color: #696969;
+    color:#696969;
+    height:69.6%;
+    left:0;
+}
+
+.right-side {
+    width: 10%;
+    float: right;
+    background-color: #696969;
+    color:#696969;
+    height:69.6%;
+    right:0;
+}
+
+.footer {
+    background-color: #00799f;
+    color: #ffffff;
+    clear: both;
+    width: 97,5%;
+    height:10.9%;
+}
+
+.blok-center {
+    position: absolute; /* Абсолютное позиционирование */
+    width: 72.25%; /* Ширина блока */
+    height:68.5%; /* Высота блока */
+    margin: 0; /* Отступ от блока */
+    top: 16.1%; /* Положение блока от верхнего края */
+    bottom: 0; /* Положение блока от нижнего края */
+    left: 13.1%; /* Положение блока от левого края */
+    background: #ffffff; /* Цвет фона блока */
+    padding: 0; /* Отступ внутри блока */
+
+}
+
+.submit {
+    display: inline-block;
+    color: white;
+    background-color: #ff00ff;
+    font-weight: 100;
+    user-select: none;
+    padding: .5em 2em;
+    outline: none;
+    border: 0;
+    font-size: 21px;
+    text-align: center;
+    padding-left: 14px;
+    padding-right: 14px;
+    padding-bottom: 3px;
+    padding-top: 3px;
+
+
+
+}
+.submit:hover { background: #ff64f8; }
+.submit:active { background: #ff00ff; }
+
+.dropbtn1, .dropbtn2, .main {
+
+    background-color: #ff00ff;
+    color: white;
+    padding-left: 14px;
+    padding-right: 14px;
+    padding-bottom: 8px;
+    padding-top: 8px;
+    font-size: 21px;
+    border: none;
+    cursor: pointer;
+    margin-right: 6px;
+}
+
+.dropbtn1:hover, .dropbtn1:focus, .dropbtn2:hover, .dropbtn2:focus, .main:hover, .main:focus {
+    background-color: #e012e0;
+
+}
+
+.dropdown1, .dropdown2, .main {
+    right: -55px;
+    top: 20px;
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-content1, .dropdown-content2 {
+    display: none;
+    position: absolute;
+    background-color: #f1f1f1;
+    min-width: 150px;
+    overflow: auto;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1;
+}
+
+.dropdown-content1 {
+    min-width: 155px;
+}
+
+.dropdown-content1 a, .dropdown-content2 a {
+    color: black;
+    padding: 12px 1px 12px 1px;
+    text-decoration: none;
+    display: block;
+}
+
+.dropdown1 a:hover, .dropdown2 a:hover {background-color: #ddd;}
+
+.show {display: block;}
+@media (min-width:1280px) and (min-height:1024px) {
+    .header img {
+        width: 28%;
+        height: 28%;
+        margin-top:20px;
+        margin-left:170px;
+    }
+    .blok-center img {
+        width: 22%;
+        height: 40%;
+        margin-top: 15%;
+    }
+}
+
+@media (min-width:1920px) {
+    .com {
+        margin-top:25%;
+        font-size: 160%;
+
+    }
+
+    #heart1 + p {
+        bottom:-30%;
+    }
+    .process {
+        margin-top: -3%;
+        font-size:130%;
+    }
+    .dropbtn1, .dropbtn2, .main {
+        font-size: 30px;
+    }
+    .dropdown-content1 a, .dropdown-content2 a {
+        font-size: 20px;
+    }
+    .dropdown-content1 {
+        min-width: 209px;
+    }
+    .dropdown-content2 {
+        min-width: 202px;
+    }
+    .info {
+        right:12%;
+    }
+    h2 {
+        position:relative;
+        right:7%;
+        font-size: 240%;
+    }
+    .header img {
+        width: 28%;
+        height: 28%;
+        margin-left:220px;
+        margin-top:0;
+    }
+
+    .blok-center img {
+        width: 30%;
+        height: 55%;
+        margin-top:12%;
+    }
+
+    h3 {
+        font-size: 1.5em;
+    }
+    p {
+        font-weight: 500;
+        font-size: 22pt;
+    }
+}
