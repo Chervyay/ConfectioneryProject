@@ -10,7 +10,29 @@ from djoser import utils
 from djoser.conf import settings as djoser_settings
 
 from .serializers import *
-# import random
+
+messages = {
+    'USER_DOES_NOT_EXISTS': 'Пользователь не существует.',
+    'USER_BLOCKED': 'Пользователь заблокирован.',
+    'USER_REGISTERED': 'Регистрация прошла успешно.',
+    'USER_EDITED': 'Профиль успешно отредактирован.',
+    'PASSWORD_RESET': 'Пароль успешно изменён.',
+    'RECIPE_ADDED': 'Рецепт успешно добавлен.',
+    'RECIPE_EDITED': 'Рецепт успешно отредактирован.',
+    'RECIPE_REMOVED': 'Рецепт успешно удалён.',
+    'RECIPES_NONE': 'Рецепты не найдены.',
+    'RECIPES_NONE_TITLE': 'Не найдено ни одного рецепта с введённым наименованием.',
+    'RECIPES_NONE_TAG': 'Не найдено ни одного рецепта с введённым тегом.',
+    'RECIPES_NONE_AUTHOR': 'Не найдено ни одного рецепта с введённым логином автора.',
+    'RECIPES_NONE_ACCESSIBLE': 'Рецепт не существует или заблокирован.',
+    'RECIPES_NONE_ACCESSIBLE_OR_OWN': 'Рецепт не существует, заблокирован или не принадлежит текущему пользователю.',
+    'COMMENT_ADDED': 'Комментарий успешно добавлен.',
+    'COMMENT_REMOVED': 'Комментарий успешно удалён.',
+    'COMMENT_NOT_ACCESSIBLE': 'Комментарий не существует или заблокирован.',
+    'NO_GRADE_YET': 'Оценка ещё не добавлена.',
+    'GRADE_NOT_ACCESSIBLE': 'Оценка не существует или заблокирована для изменения.',
+    'FIELD_MISMATCH': 'Ни одно поле формы не соответствует принимаемому формату.',
+}
 
 
 class CustomTokenCreateView(utils.ActionViewMixin, generics.GenericAPIView):
@@ -22,9 +44,15 @@ class CustomTokenCreateView(utils.ActionViewMixin, generics.GenericAPIView):
         if Client.objects.get_by_natural_key(serializer.user.username).status == 'A':
             token = utils.login_user(self.request, serializer.user)
             token_serializer_class = djoser_settings.SERIALIZERS.token
-            return Response(data=token_serializer_class(token).data, status=status.HTTP_200_OK)
+            return Response(
+                data=token_serializer_class(token).data,
+                status=status.HTTP_200_OK
+            )
         else:
-            return Response(data={"message": "Пользователь заблокирован."}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                data={'message': messages['USER_BLOCKED']},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
 
 
 @api_view(['GET'])
@@ -33,43 +61,12 @@ def recipes_all(request):
     try:
         recipes = Recipe.objects.filter(status='A')
     except Recipe.DoesNotExist:
-        return Response(data={"message": "Список рецептов пуст."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            data={'message': messages['RECIPES_NONE']},
+            status=status.HTTP_404_NOT_FOUND
+        )
     serializer = RecipeCardSerializer(recipes, many=True)
     return Response(data={'recipes': serializer.data}, status=status.HTTP_200_OK)
-
-'''
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def recipes_random(request, quantity):
-    max_quantity = Recipe.objects.filter(status='A').count()
-    if quantity < 0:
-        return Response(request.data, status=status.HTTP_404_NOT_FOUND)
-    elif quantity > max_quantity:
-        recipes = Recipe.objects.all()
-    else:
-        # Массив случайных id
-        random_id = [0] * quantity
-        for i in range(len(random_id)):
-            while True:
-                random_id[i] = random.randint(1, Recipe.objects.last().pk)
-                if Recipe.objects.filter(status='A', id=random_id[i]).exists():
-                    exist_flg = False
-                    for j in range(len(random_id)):
-                        if random_id[j] == random_id[i] and not i == j:
-                            exist_flg = True
-                            break
-                    if exist_flg:
-                        continue
-                    else:
-                        break
-                else:
-                    continue
-        recipes = Recipe.objects.filter(id__in=random_id)
-    if recipes.exists():
-        serializer = RecipeShowSerializer(recipes, many=True)
-        return Response({'recipes': serializer.data}, status=status.HTTP_200_OK)
-    else:
-        return Response(request.data, status=status.HTTP_404_NOT_FOUND)'''
 
 
 @api_view(['GET'])
@@ -78,8 +75,10 @@ def recipes_by_title(request, search_title):
     try:
         recipes = Recipe.objects.filter(status='A', title__icontains=search_title)
     except Recipe.DoesNotExist:
-        return Response(data={"message": "Не найдено ни одного рецепта с введённым наименованием."},
-                        status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            data={'message': messages['RECIPES_NONE_TITLE']},
+            status=status.HTTP_404_NOT_FOUND
+        )
     serializer = RecipeCardSerializer(recipes, many=True)
     return Response(data={'recipes': serializer.data}, status=status.HTTP_200_OK)
 
@@ -88,12 +87,17 @@ def recipes_by_title(request, search_title):
 @permission_classes([AllowAny])
 def recipes_by_tag(request, search_tag):
     try:
-        recipes = Recipe.objects.filter(status='A', fixed_tags__in=(
-            Tag.objects.filter(name__icontains=search_tag)
-        ))
+        recipes = Recipe.objects.filter(
+            status='A',
+            fixed_tags__in=(
+                Tag.objects.filter(name__icontains=search_tag)
+            )
+        )
     except Recipe.DoesNotExist:
-        return Response(data={"message": "Не найдено ни одного рецепта с введённым тегом."},
-                        status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            data={'message': messages['RECIPES_NONE_TAG']},
+            status=status.HTTP_404_NOT_FOUND
+        )
     serializer = RecipeCardSerializer(recipes, many=True)
     return Response(data={'recipes': serializer.data}, status=status.HTTP_200_OK)
 
@@ -102,12 +106,17 @@ def recipes_by_tag(request, search_tag):
 @permission_classes([AllowAny])
 def recipes_by_author(request, search_author):
     try:
-        recipes = Recipe.objects.filter(status='A', creator__in=(
-            Client.objects.filter(username__icontains=search_author)
-        ))
+        recipes = Recipe.objects.filter(
+            status='A',
+            creator__in=(
+                Client.objects.filter(username__icontains=search_author)
+            )
+        )
     except Recipe.DoesNotExist:
-        return Response(data={"message": "Не найдено ни одного рецепта с введённым логином автора."},
-                        status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            data={'message': messages['RECIPES_NONE_AUTHOR']},
+            status=status.HTTP_404_NOT_FOUND
+        )
     serializer = RecipeCardSerializer(recipes, many=True)
     return Response(data={'recipes': serializer.data}, status=status.HTTP_200_OK)
 
@@ -118,7 +127,10 @@ def client_recipes(request):
     try:
         recipes = Recipe.objects.filter(status='A', creator=request.user)
     except Recipe.DoesNotExist:
-        return Response(data={"message": "Список рецептов пуст."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            data={'message': messages['RECIPES_NONE']},
+            status=status.HTTP_404_NOT_FOUND
+        )
     serializer = RecipeCardForCreatorSerializer(recipes, many=True)
     return Response(data={'recipes': serializer.data}, status=status.HTTP_200_OK)
 
@@ -129,7 +141,10 @@ def recipe_info(request, pk):
     try:
         recipe = Recipe.objects.get(id=pk, status='A')
     except Recipe.DoesNotExist:
-        return Response(data={"message": "Рецепт не существует или заблокирован."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            data={'message': messages['RECIPES_NONE_ACCESSIBLE']},
+            status=status.HTTP_404_NOT_FOUND
+        )
     serializer = RecipePageSerializer(recipe)
     return Response(data={'recipe': serializer.data}, status=status.HTTP_200_OK)
 
@@ -140,7 +155,10 @@ def client_info(request, pk):
     try:
         client = Client.objects.get(id=pk)
     except Client.DoesNotExist:
-        return Response(data={"message": "Пользователь не существует."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            data={'message': messages['USER_DOES_NOT_EXISTS']},
+            status=status.HTTP_404_NOT_FOUND
+        )
     serializer = ClientPublicPageSerializer(client)
     return Response(data={'client': serializer.data}, status=status.HTTP_200_OK)
 
@@ -151,8 +169,10 @@ def client_self_info(request):
     try:
         client = Client.objects.get(id=request.user.id)
     except Client.DoesNotExist:
-        return Response(data={"message": "Пользователь не существует или заблокироан."},
-                        status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            data={'message': messages['USER_DOES_NOT_EXISTS']},
+            status=status.HTTP_404_NOT_FOUND
+        )
     serializer = ClientSelfPageSerializer(client)
     return Response(data={'client': serializer.data}, status=status.HTTP_200_OK)
 
@@ -163,8 +183,16 @@ def client_self_info(request):
 def client_reg(request):
     new_client = ClientFormSerializer(data=request.data, partial=True)
     if new_client.is_valid():
-        new_client.save()
-        return Response(data={"message": "Регистрация прошла успешно."}, status=status.HTTP_201_CREATED)
+        if new_client.validated_data:
+            new_client.save()
+            return Response(
+                data={'message': messages['USER_REGISTERED']},
+                status=status.HTTP_201_CREATED
+            )
+        return Response(
+            data={'message': messages['FIELD_MISMATCH']},
+            status=status.HTTP_400_BAD_REQUEST
+        )
     return Response(data=new_client.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -175,13 +203,15 @@ def client_edit(request):
     try:
         old_client = Client.objects.get(id=request.user.id)
     except Client.DoesNotExist:
-        return Response(data={"message": "Пользователь не существует или заблокирован."},
-                        status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            data={'message': messages['USER_DOES_NOT_EXISTS']},
+            status=status.HTTP_404_NOT_FOUND
+        )
 
     # флаг сброса аватарки
     avatar_reset = False
 
-    # если в поле "avatar" кодовое слово "reset"
+    # если в поле 'avatar' кодовое слово 'reset'
     if request.data.get('avatar', None) == 'reset':
         edited_data = request.data.copy()
         edited_data.pop('avatar')
@@ -191,11 +221,18 @@ def client_edit(request):
         new_client = ClientFormSerializer(instance=old_client, data=request.data, partial=True)
 
     if new_client.is_valid():
-        if avatar_reset:
-            new_client.reset_avatar()
-        new_client.save()
-        return Response(data={"message": "Данные профиля успешно отредактированы."},
-                        status=status.HTTP_202_ACCEPTED)
+        if new_client.validated_data:
+            if avatar_reset:
+                new_client.reset_avatar()
+            new_client.save()
+            return Response(
+                data={'message': messages['USER_EDITED']},
+                status=status.HTTP_202_ACCEPTED
+            )
+        return Response(
+            data={'message': messages['FIELD_MISMATCH']},
+            status=status.HTTP_400_BAD_REQUEST
+        )
     return Response(data=new_client.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -206,10 +243,18 @@ def client_pass_change(request):
     client = request.user
     passwords = ClientPasswordChangeSerializer(data=request.data)
     if passwords.is_valid():
-        if client.check_password(passwords.data.get('old_password')):
-            client.set_password(passwords.data.get('new_password'))
-            client.save()
-        return Response(data={"message": "Пароль успешно изменён."}, status=status.HTTP_202_ACCEPTED)
+        if passwords.validated_data:
+            if client.check_password(passwords.data.get('old_password')):
+                client.set_password(passwords.data.get('new_password'))
+                client.save()
+            return Response(
+                data={'message': messages['PASSWORD_RESET']},
+                status=status.HTTP_202_ACCEPTED
+            )
+        return Response(
+            data={'message': messages['FIELD_MISMATCH']},
+            status=status.HTTP_400_BAD_REQUEST
+        )
     return Response(data=passwords.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -217,10 +262,18 @@ def client_pass_change(request):
 @parser_classes([JSONParser, FormParser, MultiPartParser])
 @permission_classes([IsAuthenticated])
 def recipe_add(request):
-    new_recipe = RecipeFormSerializer(data=request.data, context={"client": request.user}, partial=True)
+    new_recipe = RecipeFormSerializer(data=request.data, context={'client': request.user}, partial=True)
     if new_recipe.is_valid():
-        new_recipe.save()
-        return Response(data={"message": "Рецепт успешно добавлен."}, status=status.HTTP_201_CREATED)
+        if new_recipe.validated_data:
+            new_recipe.save()
+            return Response(
+                data={'message': messages['RECIPE_ADDED']},
+                status=status.HTTP_201_CREATED
+            )
+        return Response(
+            data={'message': messages['FIELD_MISMATCH']},
+            status=status.HTTP_400_BAD_REQUEST
+        )
     return Response(data=new_recipe.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -231,8 +284,10 @@ def recipe_edit(request, pk):
     try:
         old_recipe = Recipe.objects.get(id=pk, creator=request.user, status='A')
     except Recipe.DoesNotExist:
-        return Response(data={"message": "Рецепт не существует, заблокирован или не принадлежит текущему пользователю."},
-                        status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            data={'message': messages['RECIPES_NONE_ACCESSIBLE_OR_OWN']},
+            status=status.HTTP_404_NOT_FOUND
+        )
 
     # флаги сброса аватарки и картинок стадий приготовления
     avatar_reset = False
@@ -247,13 +302,13 @@ def recipe_edit(request, pk):
         pictures_reset = [False] * len(cook_stages_got)
         index = 0
         for cook_stage in cook_stages_got:
-            # если в поле "picture" кодовое слово "reset"
+            # если в поле 'picture' кодовое слово 'reset'
             if cook_stage.get('picture', None) == 'reset':
                 del cook_stage['picture']
                 pictures_reset[index] = True
             index += 1
 
-    # если в поле "avatar" кодовое слово "reset"
+    # если в поле 'avatar' кодовое слово 'reset'
     if edited_data.get('avatar', None) == 'reset':
         del edited_data['avatar']
         avatar_reset = True
@@ -261,18 +316,26 @@ def recipe_edit(request, pk):
     new_recipe = RecipeFormSerializer(instance=old_recipe, data=edited_data, partial=True)
 
     if new_recipe.is_valid():
-        # физически зачищаем все сброшенные картинки
-        if pictures_reset:
-            index = 0
-            for cook_stage in new_recipe.cook_stages:
-                if pictures_reset[index]:
-                    cook_stage.reset_picture()
-                index += 1
-        if avatar_reset:
-            new_recipe.reset_avatar()
+        if new_recipe.validated_data:
+            # физически зачищаем все сброшенные картинки
+            if pictures_reset:
+                index = 0
+                for cook_stage in new_recipe.cook_stages:
+                    if pictures_reset[index]:
+                        cook_stage.reset_picture()
+                    index += 1
+            if avatar_reset:
+                new_recipe.reset_avatar()
 
-        new_recipe.save()
-        return Response(data={"message": "Данные рецепта успешно отредактированы."}, status=status.HTTP_202_ACCEPTED)
+            new_recipe.save()
+            return Response(
+                data={'message': messages['RECIPE_EDITED']},
+                status=status.HTTP_202_ACCEPTED
+            )
+        return Response(
+            data={'message': messages['FIELD_MISMATCH']},
+            status=status.HTTP_400_BAD_REQUEST
+        )
     return Response(data=new_recipe.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -282,27 +345,44 @@ def recipe_remove(request, pk):
     try:
         recipe = Recipe.objects.get(id=pk, creator=request.user, status='A')
     except Recipe.DoesNotExist:
-        return Response(data={"message": "Рецепт не существует или заблокирован."},status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            data={'message': messages['RECIPES_NONE_ACCESSIBLE']},
+            status=status.HTTP_404_NOT_FOUND
+        )
 
     # зачищаем соответствующие данные рецепта в ФС
-        # подготавливаем системный путь возможно созданного каталога файлов
+    # подготавливаем системный путь возможно созданного каталога файлов
     rm_path = settings.BASE_DIR + settings.MEDIA_URL + recipe_avatar_upload_path(recipe, '')
     rm_dir = 'recipes/%i' % recipe.id
-        # пробуем удалить каталог со всеми связанными изображениями
+    # пробуем удалить каталог со всеми связанными изображениями
     shutil.rmtree(path=rm_path[0: (rm_path.find(rm_dir) + len(rm_dir))], ignore_errors=True)
 
     recipe.delete()
-    return Response(data={"message": "Рецепт успешно удалён."}, status=status.HTTP_202_ACCEPTED)
+    return Response(
+        data={'message': messages['RECIPE_REMOVED']},
+        status=status.HTTP_202_ACCEPTED
+    )
 
 
 @api_view(['POST'])
 @parser_classes([JSONParser, FormParser, MultiPartParser])
 @permission_classes([IsAuthenticated])
 def comment_add(request, recipe_pk):
-    new_comment = CommentFormSerializer(data=request.data, context={"creator": request.user, "recipe_id": recipe_pk})
+    new_comment = CommentFormSerializer(
+        data=request.data,
+        context={'creator': request.user, 'recipe_id': recipe_pk}
+    )
     if new_comment.is_valid(raise_exception=False):
-        new_comment.save()
-        return Response(data={"message": "Комментарий успешно добавлен."}, status=status.HTTP_201_CREATED)
+        if new_comment.validated_data:
+            new_comment.save()
+            return Response(
+                data={'message': messages['COMMENT_ADDED']},
+                status=status.HTTP_201_CREATED
+            )
+        return Response(
+            data={'message': messages['FIELD_MISMATCH']},
+            status=status.HTTP_400_BAD_REQUEST
+        )
     return Response(data=new_comment.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -312,10 +392,15 @@ def comment_remove(request, pk):
     try:
         comment = Comment.objects.get(id=pk, creator=request.user, status='A')
     except Comment.DoesNotExist:
-        return Response(data={"message": "Комментарий не существует или заблокирован."},
-                        status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            data={'message': messages['COMMENT_NOT_ACCESSIBLE']},
+            status=status.HTTP_404_NOT_FOUND
+        )
     comment.delete()
-    return Response(data={"message": "Комментарий успешно удалён."}, status=status.HTTP_202_ACCEPTED)
+    return Response(
+        data={'message': messages['COMMENT_REMOVED']},
+        status=status.HTTP_202_ACCEPTED
+    )
 
 
 @api_view(['POST'])
@@ -326,60 +411,61 @@ def recipe_grade_add(request, recipe_pk):
         try:
             old_grade = RecipeGrade.objects.get(
                 recipe=Recipe.objects.get(id=recipe_pk),
-                evaluator=request.user)
+                evaluator=request.user
+            )
             new_grade = RecipeGradeFormSerializer(instance=old_grade, data=request.data)
         except RecipeGrade.DoesNotExist:
-            new_grade = RecipeGradeFormSerializer(data=request.data,
-                                                  context={"evaluator": request.user,
-                                                           "recipe_id": recipe_pk})
+            new_grade = RecipeGradeFormSerializer(
+                data=request.data,
+                context={'evaluator': request.user, 'recipe_id': recipe_pk})
         if new_grade.is_valid():
-            new_grade.save()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            if new_grade.validated_data:
+                new_grade.save()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response(
+                data={'message': messages['FIELD_MISMATCH']},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         return Response(data=new_grade.errors, status=status.HTTP_400_BAD_REQUEST)
-    return Response(data={"message": "Рецепт не существует или заблокирован."},
-                    status=status.HTTP_400_BAD_REQUEST)
+    return Response(
+        data={'message': messages['RECIPES_NONE_ACCESSIBLE']},
+        status=status.HTTP_400_BAD_REQUEST
+    )
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def recipe_grade_check(request, recipe_pk):
     try:
-        grade = RecipeGrade.objects.get(status='A', evaluator=request.user,
-                                        recipe__in=Recipe.objects.filter(
-                                            id=recipe_pk, status='A'))
+        grade = RecipeGrade.objects.get(
+            status='A',
+            evaluator=request.user,
+            recipe__in=Recipe.objects.filter(id=recipe_pk, status='A')
+        )
     except RecipeGrade.DoesNotExist:
-        return Response(data={"grade": "Ещё не оценено."},
-                        status=status.HTTP_404_NOT_FOUND)
-    return Response(data={"grade": grade.grade},
-                    status=status.HTTP_200_OK)
-
-
-'''@api_view(['PUT'])
-@permission_classes([IsAuthenticated])
-def recipe_grade_inverse(request, recipe_pk):
-    try:
-        grade = RecipeGrade.objects.get(evaluator=request.user,
-                                        recipe__in=Recipe.objects.filter(
-                                            id=recipe_pk, status='A'))
-    except RecipeGrade.DoesNotExist:
-        return Response(data={"message": "Оценка не существует или не может быть изменена."},
-                        status=status.HTTP_404_NOT_FOUND)
-    grade.status = 'A'
-    grade.grade = not grade.grade
-    grade.save()
-    return Response(status=status.HTTP_204_NO_CONTENT)'''
+        return Response(
+            data={'grade': messages['NO_GRADE_YET']},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    return Response(
+        data={'grade': grade.grade},
+        status=status.HTTP_200_OK
+    )
 
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def recipe_grade_cancel(request, recipe_pk):
     try:
-        grade = RecipeGrade.objects.get(evaluator=request.user,
-                                        recipe__in=Recipe.objects.filter(
-                                            id=recipe_pk, status='A'))
+        grade = RecipeGrade.objects.get(
+            evaluator=request.user,
+            recipe__in=Recipe.objects.filter(id=recipe_pk, status='A')
+        )
     except RecipeGrade.DoesNotExist:
-        return Response(data={"message": "Оценка не существует или не может быть отменена."},
-                        status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            data={'message': messages['GRADE_NOT_ACCESSIBLE']},
+            status=status.HTTP_404_NOT_FOUND
+        )
     # не удаляем, а только блокируем
     grade.status = 'B'
     grade.save()
@@ -394,62 +480,59 @@ def comment_grade_add(request, comment_pk):
         try:
             old_grade = CommentGrade.objects.get(
                 comment=Comment.objects.get(id=comment_pk),
-                evaluator=request.user)
+                evaluator=request.user
+            )
             new_grade = CommentGradeFormSerializer(instance=old_grade, data=request.data)
         except CommentGrade.DoesNotExist:
-            new_grade = CommentGradeFormSerializer(data=request.data,
-                                                   context={"evaluator": request.user,
-                                                            "comment_id": comment_pk})
+            new_grade = CommentGradeFormSerializer(
+                data=request.data,
+                context={'evaluator': request.user, 'comment_id': comment_pk}
+            )
         if new_grade.is_valid():
-            new_grade.save()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            if new_grade.validated_data:
+                new_grade.save()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response(
+                data={'message': messages['FIELD_MISMATCH']},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         return Response(data=new_grade.errors, status=status.HTTP_400_BAD_REQUEST)
-    return Response(data={"message": "Комментарий не существует или заблокирован."},
-                    status=status.HTTP_400_BAD_REQUEST)
+    return Response(
+        data={'message': messages['COMMENT_NOT_ACCESSIBLE']},
+        status=status.HTTP_400_BAD_REQUEST
+    )
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def comment_grade_check(request, comment_pk):
     try:
-        grade = CommentGrade.objects.get(evaluator=request.user,
-                                         comment__in=Comment.objects.filter(
-                                             id=comment_pk, status='A'))
+        grade = CommentGrade.objects.get(
+            evaluator=request.user,
+            comment__in=Comment.objects.filter(id=comment_pk, status='A')
+        )
     except CommentGrade.DoesNotExist:
-        return Response(data={"grade": "Ещё не оценено."},
-                        status=status.HTTP_404_NOT_FOUND)
-    return Response(data={"grade": grade.grade},
-                    status=status.HTTP_200_OK)
-
-
-'''@api_view(['PUT'])
-@permission_classes([IsAuthenticated])
-def comment_grade_inverse(request, comment_pk):
-    try:
-        grade = CommentGrade.objects.get(evaluator=request.user,
-                                         comment__in=Comment.objects.filter(id=comment_pk, status='A'))
-    except CommentGrade.DoesNotExist:
-        return Response(data={"message": "Оценка не найдена или не может быть изменена."},
-                        status=status.HTTP_404_NOT_FOUND)
-    grade.status = 'A'
-    grade.grade = not grade.grade
-    grade.save()
-    return Response(status=status.HTTP_204_NO_CONTENT)'''
+        return Response(
+            data={'grade': messages['NO_GRADE_YET']},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    return Response(data={'grade': grade.grade}, status=status.HTTP_200_OK)
 
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def comment_grade_cancel(request, comment_pk):
     try:
-        grade = CommentGrade.objects.get(evaluator=request.user,
-                                         comment__in=Comment.objects.filter(id=comment_pk, status='A'))
+        grade = CommentGrade.objects.get(
+            evaluator=request.user,
+            comment__in=Comment.objects.filter(id=comment_pk, status='A')
+        )
     except CommentGrade.DoesNotExist:
-        return Response(data={"message": "Оценка не существует или не может быть отменена."},
-                        status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            data={'message': messages['GRADE_NOT_ACCESSIBLE']},
+            status=status.HTTP_404_NOT_FOUND
+        )
     # не удаляем, а только блокируем
     grade.status = 'B'
     grade.save()
     return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-# def remove_client()

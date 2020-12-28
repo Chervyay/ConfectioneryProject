@@ -1,4 +1,5 @@
 import os
+import shutil
 
 from django.db import models
 from django.conf import settings
@@ -13,15 +14,15 @@ from django.core.validators import MaxValueValidator
 # Django автоматичеки использует MEDIA_ROOT для загрузки изображений
 
 def client_avatar_upload_path(instance, filename):
-    return '/'.join(['pictures', 'users', str(instance.id), 'avatar', filename])
+    return '/'.join([Client.dir_path, str(instance.id), 'avatar', filename])
 
 
 def recipe_avatar_upload_path(instance, filename):
-    return '/'.join(['pictures', 'users', str(instance.creator.id), 'recipes', str(instance.id), 'avatar', filename])
+    return '/'.join([Client.dir_path, str(instance.creator.id), 'recipes', str(instance.id), 'avatar', filename])
 
 
 def cook_stage_picture_upload_path(instance, filename):
-    return '/'.join(['pictures', 'users', str(instance.recipe.creator.id), 'recipes', str(instance.recipe.id),
+    return '/'.join([Client.dir_path, str(instance.recipe.creator.id), 'recipes', str(instance.recipe.id),
                      'cook stages', filename])
 
 
@@ -68,6 +69,7 @@ class Client(AbstractBaseUser, PermissionsMixin):
     EMAIL_FIELD = 'email'
     USERNAME_FIELD = 'username'
 
+    dir_path = 'pictures/users'
     default_avatar = settings.MEDIA_URL + 'pictures/default/client_default.jpg'
 
     def try_get_avatar(self):
@@ -81,6 +83,13 @@ class Client(AbstractBaseUser, PermissionsMixin):
                 raise ValueError
         except ValueError:
             return self.default_avatar
+
+    def safety_delete(self):
+        rm_path = settings.BASE_DIR + settings.MEDIA_URL + self.dir_path + '/' + str(self.id)
+        # пробуем удалить каталог со всеми связанными изображениями
+        shutil.rmtree(path=rm_path, ignore_errors=True)
+        # удаляем запись из БД
+        self.delete()
 
 
 class Recipe(models.Model):

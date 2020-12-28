@@ -106,7 +106,9 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-CURRENT_PREFIX = 'http://tuna-muna-46159.portmap.host:46159'
+CURRENT_PREFIX = 'http://Tuna-Muna-60338.portmap.host:60338'
+# CURRENT_PREFIX = '188.243.62.96:8000'
+# 192.168.1.52
 
 AUTH_USER_MODEL = 'Backend.Client'
 

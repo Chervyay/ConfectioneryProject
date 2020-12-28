@@ -200,8 +200,6 @@ class CookStageSerializer(serializers.ModelSerializer):
 # (для добавления к рецепту)
 class CookStageFormSerializer(serializers.ModelSerializer):
 
-    picture = serializers.SerializerMethodField(required=False)
-
     class Meta:
         model = CookStage
         fields = ['description', 'picture']
